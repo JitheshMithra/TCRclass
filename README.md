@@ -1,4 +1,4 @@
-# TCR Source Classification Project
+# TCRclass - TCR Source Classification Project
 
 Build a multi-class TCR source classifier.
 
