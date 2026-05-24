@@ -8,6 +8,11 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import f1_score
 import matplotlib.pyplot as plt
 from model import TCRClassifier
+from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.preprocessing import label_binarize
+import seaborn as sns
+import os
+from sklearn.metrics import roc_curve, auc
 
 embeddings=np.load("../outputs/embeddings/esm2_embeddings.npy")
 dataframe=pd.read_csv("../outputs/embeddings/cleaned_with_labels.csv")
@@ -111,10 +116,64 @@ for i in range(epochs):
     valf1s.append(f1)
     print(f"Epoch {i+1}/{epochs} | Train Loss: {trainloss:.4f} | Val Loss: {valloss:.4f} | Macro F1: {f1:.4f}")
 print("\nModel saved to ../outputs/model.pt")
+os.makedirs("../outputs/figures", exist_ok=True)
+
+#load model for final evaluation
+model.load_state_dict(torch.load("../outputs/model.pt"))
+model.eval()
+
+finalpreds = []
+finaltrue = []
+finalprobs = []
+
+with torch.no_grad():
+    for xbatch, ybatch in valloader:
+        xbatch = xbatch.unsqueeze(1).to(device)
+        ybatch = ybatch.to(device)
+        output = model(xbatch)
+        probs = torch.softmax(output, dim=1).cpu().numpy()
+        preds = torch.argmax(output, dim=1).cpu().numpy()
+        finalpreds.extend(preds)
+        finaltrue.extend(ybatch.cpu().numpy())
+        finalprobs.extend(probs)
+
+finalpreds = np.array(finalpreds)
+finaltrue = np.array(finaltrue)
+finalprobs = np.array(finalprobs)
+
+#per class f1
+print("\nPer-class F1:")
+print(classification_report(finaltrue, finalpreds, target_names=labelencoder.classes_))
+
+#confusion matrix
+plt.figure(figsize=(8,6))
+cm =confusion_matrix(finaltrue, finalpreds)
+sns.heatmap(cm, annot=True, fmt='d', xticklabels=labelencoder.classes_, yticklabels=labelencoder.classes_, cmap='Blues')
+plt.xlabel("Predicted")
+plt.ylabel("True")
+plt.title("Confusion Matrix")
+plt.tight_layout()
+plt.savefig("../outputs/figures/confusion_matrix.png")
+print("Saved confusion matrix")
+
+#AUC curves
+finaltruebinary = label_binarize(finaltrue, classes=[0,1,2,3])
+plt.figure(figsize=(8,6))
+colors = ['blue', 'red', 'green', 'orange']
+for i, (classname, color) in enumerate(zip(labelencoder.classes_, colors)):
+    fpr, tpr, _ = roc_curve(finaltruebinary[:,i], finalprobs[:,i])
+    aucval = auc(fpr, tpr)
+    plt.plot(fpr, tpr, color=color, label=f"{classname} (AUC={aucval:.2f})")
+plt.plot([0,1],[0,1],'k--')
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.title("ROC Curves")
+plt.legend()
+plt.tight_layout()
+plt.savefig("../outputs/figures/roc_curves.png")
+print("Saved ROC curves")
 
 #loss curves just for you yash
-import os
-os.makedirs("../outputs/figures", exist_ok=True)
 plt.figure(figsize=(12,4))
 plt.subplot(1,2,1)
 plt.plot(trainlosses, label="Train Loss")
