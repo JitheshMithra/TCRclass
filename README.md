@@ -32,7 +32,6 @@ TCRclass/
 ```bash
 git clone https://github.com/JitheshMithra/TCRclass.git
 cd TCRclass
-pip install
 # Install PyTorch with CUDA first (required before other packages):
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
 # Then install remaining dependencies:
