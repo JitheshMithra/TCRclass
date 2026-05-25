@@ -1,58 +1,135 @@
 # TCRclass - TCR Source Classification Project
 
-Build a multi-class TCR source classifier.
+A 4-class TCR source classifier using ESM-2 and an attention-based classifier head.
 
-Each TCR belongs to one of four source categories based on what its cognate antigen is associated with. The data in this repository is the public training set only; final evaluation uses a held-out TCR set that is not included here.
+**Competition result: Macro F1 = 0.40**
 
-## Data
+## Approach
 
-The training data is provided as a single CSV file at `data/TCR-Processed-Raw.csv`. The file is mostly raw and uncleaned. It contains inconsistent formatting, a long-tail distribution of source pathologies, and many labels that may or may not map to one of the four target classes. Cleaning the data, deciding which pathologies belong to which class, handling ambiguous or duplicate labels, and choosing what to drop are part of the task.
+CDR3β sequences are embedded using ESM-2 650M parameter protein language model. The resulting 1280 dimensional embeddings are passed through a multi-head attention classifier head that learns to distinguish between four TCR source classes. viral, bacterial, cancer, and autoimmune.
 
-The relevant columns are:
+## REPO STRUCTURE
+```bash
+TCRclass/
+├── data/
+│   ├── TCR-Processed-Raw.csv      
+│   └── test_set.csv               
+├── src/
+│   ├── clean.py                   
+│   ├── embeddings.py              
+│   ├── model.py                  
+│   ├── train.py                   
+│   ├── prediction.py              
+│   └── attention.py             
+├── outputs/
+│   ├── embeddings/               
+│   ├── figures/                
+│   └── model.pt                   
+├── .gitignore
+└── README.md
+```
+## Installation
+```bash
+git clone https://github.com/JitheshMithra/TCRclass.git
+cd TCRclass
+pip install
+# Install PyTorch with CUDA first (required before other packages):
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+# Then install remaining dependencies:
+pip install -r requirements.txt
 
-- `CDR3β` — the CDR3β amino acid sequence
-- `Vβ` — the Vβ gene (may be missing)
-- `Jβ` — the Jβ gene (may be missing)
-- `Pathology` — the source pathology label (raw, uncleaned)
+```
 
-The cognate antigen sequence itself is **not** provided.
+GPU strongly recommended. 
+## How to Run
 
-Target classes:
+Run all scripts from the `src/` directory:
 
-- `viral`
-- `bacterial`
-- `cancer`
-- `autoimmune`
+```bash
+cd src
+```
 
-## Challenge
+### Data Cleaning
 
-Train a model that predicts the source category for each TCR.
+```bash
+python clean.py
+```
 
-The submitted model must be able to make predictions in both input modes:
+Maps 31 raw pathology labels to 4 target classes, validates CDR3 sequences, handles missing V/J genes. Outputs `data/TCR-cleaned.csv`.
 
-- **sequence only**, when only the CDR3β sequence is provided
-- **sequence plus genes**, when the CDR3β sequence is provided alongside Vβ and/or Jβ gene annotations
+### Generate ESM-2 Embeddings
 
-The model should handle missing V and/or J gene information gracefully, since a substantial fraction of the training data is missing one or both.
+```bash
+python embeddings.py
+```
 
-There is no required architecture. Handcrafted physicochemical features, classical machine learning, position-specific scoring, k-mer encodings, pretrained protein or TCR language model embeddings, sequence models, and hybrid approaches are all valid if the result is reproducible and scientifically justified.
+Runs all CDR3 sequences through ESM-2 650M and saves embeddings. 
 
-You may not use any model or dataset that was trained directly on labels overlapping the held-out test set. Any additional TCR-epitope database used by your final model must be disclosed and justified.
+### Step 3 Train the Model
 
-## Evaluation
+```bash
+python train.py
+```
 
-Evaluation is four-class classification on a held-out test set. The held-out set is restricted to TCRs whose source pathology clearly maps to one of the four target classes, so you do not need to handle an "other" category at inference time. Each submission will be evaluated separately in both input modes: sequence only and sequence plus genes.
+Trains the attention classifier on ESM-2 embeddings. Generates loss curves, confusion matrix, ROC curves, and Macro F1 validation curves.
 
-Submissions should produce one score or probability per class for each TCR in either mode.
+Outputs `outputs/model.pt` and figures in `outputs/figures/`.
 
-Primary metric:
+### Step 4 Generate Predictions
 
-- macro F1 across classes
+```bash
+python prediction.py
+```
 
-Secondary metrics:
+Outputs `outputs/submission.csv` in csv format.
 
-- micro F1
-- per-class F1
-- accuracy
+## Results
 
-Predicted probabilities are preferred so decision thresholds can be applied consistently across submissions.
+| Class | Precision | Recall | F1 | AUC |
+|---|---|---|---|---|
+| Viral | 0.86 | 0.46 | 0.60 | 0.69 |
+| Bacterial | 0.28 | 0.65 | 0.39 | 0.82 |
+| Cancer | 0.22 | 0.50 | 0.30 | 0.74 |
+| Autoimmune | 0.09 | 0.26 | 0.13 | 0.60 |
+| **Macro avg** | **0.36** | **0.47** | **0.36** | |
+| **Kaggle score** | | | **0.40** | |
+
+## Output Figures:
+<img width="1200" height="400" alt="training_curves" src="https://github.com/user-attachments/assets/d20e9cee-e577-4f77-8957-6e5030af9d2c" />
+<img width="800" height="600" alt="roc_curves" src="https://github.com/user-attachments/assets/c02e5586-154c-4c2b-9dd8-92ebd578acf2" />
+<img width="800" height="600" alt="confusion_matrix" src="https://github.com/user-attachments/assets/07aa4cf3-a532-42ca-b13c-c6f1f805aa8b" />
+<img width="2100" height="1500" alt="attention_heatmaps" src="https://github.com/user-attachments/assets/bb9b6172-16e8-40c3-ae7d-1ec09f65d6e2" />
+
+
+## Limitations and Assumptions
+
+**Class imbalance:** Training data is mostly viral which creates heavily skewed decision despite class weighting. The model struggles most with autoimmune due to overlap with normal TCR repertoire diversity.
+
+**Sequence only mode:** V/J gene features were not used in the final model. TRBV and TRBJ noise made clean label encoding unreliable. This is a valid improvement.
+
+**Mean pooling limitation:** ESM-2 embeddings are mean-pooled over sequence length before the attention layer, losing positional information. Attention heatmaps are uniform and not biologically interpretable. Per-token embeddings would mean a full pipeline redesign.
+
+**Single model:** Ensemble training was attempted but produced worse results due to insufficient architectural diversity between models.
+
+**Dataset scope:** Only M. tuberculosis represents the bacterial class. The model may not generalize to other bacterial pathogens.
+
+## Future Improvements
+
+- V/J gene label encoding concatenated to ESM-2 embeddings
+- Fine-tune last 2-3 ESM-2 transformer layers on TCR data
+- Per-token embeddings to use meaningful attention visualization
+- Cross-fold validation for more stronger performance estimates
+- Architecturally diverse ensemble (V/J model + sequence-only model)
+
+## Reproducibility
+
+To exactly reproduce the competition submission:
+
+```bash
+python clean.py
+python embeddings.py
+python train.py    
+python prediction.py
+```
+
+Hardware: NVIDIA RTX 4060, CUDA 13.1 driver
