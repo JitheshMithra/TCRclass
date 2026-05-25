@@ -4,10 +4,18 @@ import numpy as np
 import pandas as pd
 from model import TCRClassifier
 import os
+import pickle
+
 
 testdataframe=pd.read_csv("../data/test_set.csv")
 print(f"Test set shape: {testdataframe.shape}")
 print(f"Test columns: {testdataframe.columns.to_list()}")
+
+with open('../outputs/vencoder.pkl','rb') as f:
+    vencoder= pickle.load(f)
+with open('../outputs/jencoder.pkl','rb') as f:
+    jencoder =pickle.load(f)
+
 print("\nLoading ESM-2...")
 modelesm, alphabet = esm.pretrained.esm2_t33_650M_UR50D()
 batchconverter=alphabet.get_batch_converter()
@@ -42,6 +50,22 @@ for i in range(0, len(testdataframe), batchsize):
         print(f"Processed {min(i+batchsize,len(testdataframe))}/{len(testdataframe)} sequences")
 testembeddings=np.array(testembeddings)
 print(f"\nTest embeddings shape: {testembeddings.shape}")
+
+testdataframe['TRBV']=testdataframe['TRBV'].fillna('unknown')
+testdataframe['TRBJ']= testdataframe['TRBJ'].fillna('unknown')
+
+#handle unseen gene values
+def safetransform(encoder, values):
+    known = set(encoder.classes_)
+    return np.array([encoder.transform([v])[0] if v in known else encoder.transform(['unknown'])[0] for v in values])
+
+vtest = safetransform(vencoder,testdataframe['TRBV']).reshape(-1, 1)
+jtest = safetransform(jencoder,testdataframe['TRBJ']).reshape(-1, 1)
+
+testembeddings = np.concatenate([testembeddings,vtest,jtest], axis=1)
+
+print(f"Test embeddings with V/J shape: {testembeddings.shape}")
+
 classifier=TCRClassifier().to(device)
 classifier.load_state_dict(torch.load("../outputs/model.pt", map_location=device))
 classifier.eval()

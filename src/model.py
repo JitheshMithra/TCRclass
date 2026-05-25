@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 
 class TCRClassifier(nn.Module):
-    def __init__(self, embeddingdim=1280, numheads=8, numclasses=4,dropout=0.5):
+    def __init__(self, embeddingdim=1282,numheads=2,numclasses=4,dropout=0.5):
         super(TCRClassifier, self).__init__()
         self.attention=nn.MultiheadAttention(embed_dim=embeddingdim, num_heads=numheads,dropout=dropout,batch_first=True)
         self.layernorm=nn.LayerNorm(embeddingdim)

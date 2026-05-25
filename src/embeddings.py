@@ -3,6 +3,8 @@ import esm
 import pandas as pd
 import numpy as np
 import os
+from sklearn.preprocessing import LabelEncoder
+import pickle
 
 dataframe=pd.read_csv("../data/TCR-cleaned.csv")
 print(f"loaded {len(dataframe)} sequences")
@@ -53,3 +55,26 @@ np.save("../outputs/embeddings/esm2_embeddings.npy", embeddings)
 dataframe.to_csv("../outputs/embeddings/cleaned_with_labels.csv", index=False)
 print("Saved embeddings to ../outputs/embeddings/esm2_embeddings.npy")
 print("Saved labels to ../outputs/embeddings/cleaned_with_labels.csv")
+
+#v and j genes
+dataframe["V_gene"]=dataframe["V_gene"].fillna("unknown")
+dataframe["J_gene"]=dataframe["J_gene"].fillna("unknown")
+
+vencoder=LabelEncoder()
+jencoder=LabelEncoder()
+
+vencoded=vencoder.fit_transform(dataframe["V_gene"]).reshape(-1,1)
+jencoded=jencoder.fit_transform(dataframe["J_gene"]).reshape(-1,1)
+
+embeddings=np.concatenate([embeddings, vencoded, jencoded], axis=1)
+print(f"\nEmbeddings with V/J shape: {embeddings.shape}")
+
+os.makedirs("../outputs", exist_ok=True)
+with open("../outputs/vencoder.pkl","wb") as f:
+    pickle.dump(vencoder,f)
+with open("../outputs/jencoder.pkl","wb") as f:
+    pickle.dump(jencoder,f)
+
+np.save("../outputs/embeddings/esm2_embeddings.npy",embeddings)
+dataframe.to_csv("../outputs/embeddings/cleaned_with_labels.csv",index=False)
+print("Saved embeddings with V/J to ../outputs/embeddings/esm2_embeddings.npy")
