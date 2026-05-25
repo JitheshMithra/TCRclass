@@ -80,8 +80,9 @@ Outputs `outputs/model.pt` and figures in `outputs/figures/`.
 ```bash
 python prediction.py
 ```
+Outputs `outputs/submission.csv` in csv format.
 
-You can run the trained model on a custom TCR sequence directly from the terminal:
+_You can run the trained model on a custom TCR sequence directly from the terminal:_
 ```bash
 python input.py --cdr3 CASSLAPGATNEKLFF --vgene TRBV12-3 --jgene TRBJ2-7
 ```
@@ -96,7 +97,6 @@ Additional Example (Without genes):
 ```bash
 python input.py --cdr3 CASSIRSSYEQYF
 ```
-Outputs `outputs/submission.csv` in csv format.
 
 ## Results
 
