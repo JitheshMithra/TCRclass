@@ -20,7 +20,7 @@ TCRclass/
 │   ├── model.py                  
 │   ├── train.py                   
 │   ├── prediction.py              
-│   └─ attention.py
+│   ├─ attention.py
 │   └─ input.py             
 ├── outputs/
 │   ├── embeddings/               
