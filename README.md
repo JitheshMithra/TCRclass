@@ -21,7 +21,7 @@ TCRclass/
 │   ├── train.py                   
 │   ├── prediction.py              
 │   └─ attention.py
-|   └─ input.py             
+│   └─ input.py             
 ├── outputs/
 │   ├── embeddings/               
 │   ├── figures/                
