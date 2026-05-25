@@ -81,6 +81,21 @@ Outputs `outputs/model.pt` and figures in `outputs/figures/`.
 python prediction.py
 ```
 
+You can run the trained model on a custom TCR sequence directly from the terminal:
+```bash
+python input.py --cdr3 CASSLAPGATNEKLFF --vgene TRBV12-3 --jgene TRBJ2-7
+```
+Arguments:
+  - --cdr3 (required): CDR3β amino acid sequence
+  - --vgene (optional): TRBV gene (default = unknown)
+  - --jgene (optional): TRBJ gene (default = unknown)
+
+The script will output predicted class probabilities and the final classification.
+
+Additional Example (Without genes):
+```bash
+python input.py --cdr3 CASSIRSSYEQYF
+```
 Outputs `outputs/submission.csv` in csv format.
 
 ## Results
