@@ -131,4 +131,8 @@ python train.py
 python prediction.py
 ```
 
+OPTIONAL ATTENTION HEATMAP GENERATION:
+```bash
+python attention.py
+```
 Hardware: NVIDIA RTX 4060, CUDA 13.1 driver
