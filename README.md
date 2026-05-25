@@ -93,7 +93,7 @@ Arguments:
 
 The script will output predicted class probabilities and the final classification.
 
-Additional Example (Without genes):
+_Additional Example (Without genes):_
 ```bash
 python input.py --cdr3 CASSIRSSYEQYF
 ```
