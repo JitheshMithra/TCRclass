@@ -65,7 +65,7 @@ bestval = float('inf')
 patience = 10
 patientcounter = 0
 scheduler =torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=5,factor=0.5)
-epochs= 50
+epochs= 100
 trainlosses=[]
 vallosses=[]
 valf1s=[]
