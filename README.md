@@ -2,7 +2,7 @@
 
 A 4-class TCR source classifier using ESM-2 and an attention-based classifier head.
 
-**Competition result: Macro F1 = 0.40**
+**BSR Intern Competition result: Macro F1 = 0.40**
 
 ## Approach
 
